@@ -1,0 +1,40 @@
+---
+title: "Making bibliographies for R markdown documents"
+author: "Andrew Irwin"
+date: "`r Sys.Date()`"
+output: html_document
+bibliography: references.bib
+link-citations: true
+---
+
+## Making bibliographies and citing sources
+
+I've been using R markdown for several years now, and I've seen documents that have citations and bibliographies, but I didn't know how easy it was to find and insert new sources in my documents. If you read about the tools, you might see a lot of explanation about BibTeX and LaTeX, which are typesetting tools that I've used, but you don't need to know anything about these tools.
+
+Here are the steps:
+
+-   Create a new R markdown document
+
+-   Add the lines `bibliography: references.bib` and `link-citations: true` to the document markup at the top (where title, author, date already appear). You can use any filename in the place of `references.bib`
+
+-   Write some text and get to a place where you want to insert a citation.
+
+-   Turn on the visual editor (click "Visual") and click `Insert > Citation` or use Shift-Cmd-F8.
+
+-   Pick a reference using a DOI, your Zotero library (the app must be open on your computer), Cross-Ref, PubMed, DataCite, R packages, or a BibTeX file.
+
+    -   An easy way to get a BibTeX entry is to use Google Scholar, click cite and then "BibTeX". Cut and paste the result into your references.bib file.
+
+-   The reference data is added to your bibliography and a citation inserted into the text.
+
+-   That's it. All done.
+
+## Example
+
+Here I'll cite some great references for learning R:
+
+-   The documentation for the ggplot2 package: [@ggplot2]
+
+-   @chang2018r The R graphics cookbook.
+
+-   @healy2018data Data Visualization: A Practical Introduction.

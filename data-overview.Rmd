@@ -1,0 +1,51 @@
+---
+title: "Data overviews"
+author: "Andrew Irwin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(palmerpenguins)
+library(lterdatasampler) # remotes::install_github("lter/lterdatasampler")
+```
+
+When you first get a new dataset into R you should immediately have a few questions: 
+
+* What is in this dataset?
+* Was the data read correctly?
+* Are there any easily spotted errors?
+
+The following functions give quick summaries of the data that may help you with these questions.
+
+* head, str, pillar::glimpse, vtree, naniar
+
+```{r}
+head(penguins)
+```
+
+```{r}
+str(penguins)
+pillar::glimpse(penguins)
+```
+
+
+
+
+```{r}
+vtree::vtree(penguins, "species island sex", sameline = TRUE)
+vtree::vtree(penguins, "year island", sameline = TRUE)
+```
+
+## Where are those missing values?
+
+The package `naniar` has many functions to identify and summarize missing data in a data frame. Here are just a few examples.
+
+```{r}
+naniar::miss_var_summary(penguins)
+naniar::miss_case_table(penguins)
+naniar::gg_miss_upset(penguins)
+```
+
+

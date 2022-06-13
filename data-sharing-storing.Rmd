@@ -1,0 +1,51 @@
+---
+title: "Storing and sharing data"
+author: "Andrew Irwin"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Tradeoffs
+
+The classic tradeoff in computing is between time and storage space.
+These trade-offs are important when using data too: bulkier data formats
+can be faster to use, but there are interesting exceptions too.
+Compressed data is faster to transmit between computers and is often
+faster to move from storage on your computer into the processor too.
+Compressed data can be highly structured and faster to access compared
+to bulkier data. With modern computers for many people and much of their
+data, these trade-offs are not particularly important.
+
+The biggest barrier to using data is finding the data and finding easily
+understood metadata. Where are the data? How do I cite the data? Can
+anyone else find those data? How easy is it for others to use the data?
+Are the meanings of the variables clearly described? Are the units? Can
+I validate the data to be sure there are no "obvious" errors? Can I be
+sure I got them into my computer without error?
+
+## Easy to use
+
+For R users, the easiest data to use can be found in R packages. For
+example the `palmerpenguins` data is easy to find on CRAN or github,
+easy to install on your computer, and is well documented
+[@palmerpenguins].
+
+frictionless data
+
+## Metadata
+
+How to find? Cite? Use?
+
+Github osf.io or other repository
+
+## Formats
+
+csv xlsx frictionless csv databases - sqlite, duckdb fst, parquet

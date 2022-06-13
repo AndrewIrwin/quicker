@@ -1,0 +1,65 @@
+---
+title: "Date calculations"
+author: "Andrew Irwin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lubridate)
+```
+
+Here are the tasks I do most frequently with dates:
+
+* Convert text into a date
+* Extract parts of a date (the year, month, day, week, day of year, convert date to a decimal year)
+* Find the length of time between two dates
+
+I use the `lubridate` package for all these tasks. Related proejcts `date` and `chron` may be helpful too.
+
+It's helpful to know that dates, times, and combinations of dates and times are different in R. Furthermore, there are different ways to represent dates.
+
+## Common tasks
+
+### Converting text to a date
+
+If you have a date in a column of data, when you read it into R with `read_csv`, the function will attempt to recognize the text as a date and convert it for you. Since some date formats are ambiguous, this will not always be possible. (Create an example file.) The family of functions `ymd`, `dmy`, `mdy` recognize text dates formatted in that order to dates. If the date is illegal (e.g., April 31 or February 29 in a non-leap year) the result will be NA.
+
+```{r}
+ymd(c("2022-06-12", "2022 June 12", "22/6/12"))
+dmy(c("12/6/22", "12th of June, 2022.", "12-06-2022"))
+mdy(c("6/12/22", "June 12, 2022", "06-12-2022"))
+```
+
+If you write months in a language that is not part of your locale (see `Sys.getlocale()` and `readr::locale()`) then the results may surprise you. Can you tell what happened here?
+
+```{r}
+mdy(c("Juin 12, 2022",  "Junio 12, 2022"))
+```
+
+If you have a lot of dates in a strange format that these functions can't interpret, you can use `parse_date_time` to describe what you want done.
+
+### Extracting parts of a date
+
+```{r}
+n = today()
+year(n)
+month(n)
+day(n)
+week(n)
+quarter(n)
+yday(n)
+leap_year(n)
+decimal_date(n)
+```
+
+### Creating dates
+
+```{r}
+now()
+today()
+make_date(2022, 6, 12)
+date_decimal(2022.4447, tz = "America/Halifax")
+as_date(135)  # number of days since Jan 1, 1970
+```

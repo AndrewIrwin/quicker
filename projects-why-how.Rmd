@@ -1,0 +1,36 @@
+---
+title: "When you start to work"
+author: "Andrew Irwin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Projects and why to use them
+
+I do a lot of work with R and Rstudio. More importantly, I do a lot of different work: teaching, research, collaborative work. I switch between tasks frequently. Rstudio has a way to help you manage projects -- by creating "R projects". It's quick and easy.
+
+Each time I sit down to do a new calculation or analysis, I start a new project in a new R session. I create a new folder, Rstudio makes a small `.Rproj` file, and I make a git repository for the project.
+
+## How to do it
+
+Using Rstudio:
+
+* File > New Project...
+* New Directory > New Project
+* Pick a name for the new project to be used as the directory name, and a directory to store the new project
+* Create a git repository
+* Open the project in a new session.
+
+This is so easy, it only takes a couple of seconds, but the benefits are significant.
+
+## Benefits
+
+* Keeping files from a project together and out of the way of other projects
+* Tracking open files that I'm working on
+* Git and Github assistance
+* Locating files with the `here` package
+* Managing references
