@@ -1,0 +1,170 @@
+---
+title: "Sharing data"
+author: "Andrew Irwin"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse, quietly = TRUE)
+```
+
+This note pairs well with my notes on [storing data](data-storing.Rmd).
+
+## Describing and finding data
+
+The biggest barrier to using data is finding the data and finding easily
+understood metadata. Where are the data? How do I cite the data? Can
+anyone else find those data? How easy is it for others to use the data?
+Are the meanings of the variables clearly described? Are the units? Can
+I validate the data to be sure there are no "obvious" errors? Can I be
+sure I got them into my computer without error?
+
+My focus here is on "tabular" data, meaning data organized in
+rectangular tables with one observation per row and columns representing
+different variables. Each column has its own name, units, and data type
+(text, date, numeric). Less regular data (lists) and more regular large
+data (spatial-temporal gridded data fields) have other challenges and
+are often stored in other formats.
+
+## Easy to use
+
+For R users, the easiest data to use can be found in R packages. For
+example the `palmerpenguins` data is easy to find on CRAN or github,
+easy to install on your computer, and is well documented
+[@palmerpenguins]. This project is being expanded to publicize selected
+datasets from other Long Term Ecological Research (LTER) sites:
+[lterdatasampler](https://github.com/lter/lterdatasampler).
+
+If your audience might not be using R, you should consider other
+formats! The most common is a spreadsheet or text file with delimiters
+(comma, tab, or other) between variables (fields). Spreadsheets are easy
+to use, but file formats change, and some applications are notorious for
+silently altering data, most commonly dates or data that look like
+dates. Comma separated values format is easy to use and widely
+accessible, but important information about the data is not stored with
+the data -- what do the variable names mean, what units are the
+variables provided in, what are the data types (text, date, integer,
+decimal numeric)? There are many solutions to this problem, but none are
+particularly widely used. Here I will advocate for a format called
+[frictionless data](https://frictionlessdata.io/) promoted by the [Open
+Knowledge
+Foundation](https://en.wikipedia.org/wiki/Open_Knowledge_Foundation).
+
+## Making a frictionless data package
+
+Start by installing the [frictionless](https://github.com/frictionlessdata/frictionless-r) package from CRAN.
+
+```{r}
+library(frictionless)
+```
+
+I'll create some sample data for testing purposes.
+
+```{r}
+N = 100
+test_data <- tibble(
+  letters = sample(letters, N, replace=TRUE),
+  words = sample(words, N, replace=TRUE),
+  condition = sample(c(TRUE, FALSE), N, replace = TRUE),
+  indexes = sample(1:N, N),
+  normals = rnorm(N, 25, 3),
+  factors = factor(sample(LETTERS, N, replace=TRUE)),
+  dates = lubridate::today() + sample(-(1:365), N, replace = TRUE),
+  times = lubridate::now() + sample(-(1:86400), N, replace = TRUE)
+)
+```
+
+## Create data pacakge
+
+Create an R object to hold the data.
+
+```{r}
+my_package <- create_package() |>
+  add_resource(resource_name = "test_data", data = test_data) |>
+  add_resource(resource_name = "penguins", data = palmerpenguins::penguins)
+```
+
+Inspect the data packge
+
+```{r}
+resources(my_package)
+```
+
+## Metadata
+
+A schema that describes all the variables is automatically created for you. This only includes the names of the variables and the data types. (Already the data types information is a huge improvement over the standard R method of guessing data types.)
+
+```{r}
+my_package |> get_schema("test_data")
+```
+
+You can, and should, add descriptions for each variable. You can do this with R (see below), or by editing the json file.
+
+```{r}
+my_package$fields[[1]]$description <- "Some letters."
+my_package$fields[[2]]$description <- "Some words."
+my_package$fields[[7]]$description <- "Randomly selected days from the last year."
+my_package$fields[[8]]$description <- "Randomly selected times from the last 24 hours."
+
+```
+
+Ideas for more metadata are provided in the documentation for [packages](https://specs.frictionlessdata.io/data-package/#metadata) and [tables](https://specs.frictionlessdata.io/table-schema/#descriptor).
+
+Suggested metadata for the package include a title, license, description, homepage, version, sources, contributors, keywords, and
+creation date-time.
+
+Suggested metadata for a data table include title, example, description (set above), and information on how missing data are represented, or primary and foreign keys for data and connections between data tables. Data types can be annotated with constraints such as minimum values, lengths, a requirement to be unique, or a list of possible values (enum). R makes the enum specification for factor variables automatically (see the example), but otherwise you are on your own to describe these features.
+
+## Set and display table metadata
+
+Write a function to convert metadata from a resource into a tibble and the reverse. Display nicely with kable, datatable.
+
+
+## Make a copy for reuse and redistribution
+
+Write the data package to a folder on your disk.
+
+```{r}
+fn <- paste0(tempdir(), "/data-package")
+my_package |>
+  write_package(directory = fn, compress = TRUE)
+```
+
+Look at the directory to see what files are there. There should be two csv files, one with penguin data, one with our test data. The third file (datapackage.json) has the metadata for the file.
+
+This folder can be redistributed, e.g., on a data repository or on GitHub. Even if the recipient doesn't know or want to use the frictionless data tools, the csv files are still provided.
+
+## Validating data
+
+You can validate your data package before redistributing it or using it. This can't be done in R (at the time of writing), instead use the [Frictionless Framework](https://github.com/frictionlessdata/frictionless-py) in Python using `frictionless validate datapackage.json`.
+
+## Using the data in R
+
+Let's load that data from the data package. This could be the datapackage.json file we just created, or a copy stored somewhere on the internet. There are two steps: read the metadata about the package, then read any resources you want.
+
+```{r}
+new_package <- read_package(paste0(fn, "/datapackage.json"))  
+resources(new_package)
+new_test_data <- read_resource(new_package, "test_data")
+```
+
+## Distribution
+
+How to find? Cite? Use?
+
+Github osf.io or other repository
+
+## References
+
+-   Developing a data management plan [@michener2015]
+-   Planning storage of digital data [@hart2016]
+-   Care and feeding of scientific data [@goodman2014]
+-   a reference for spreadsheet data management
+-   [FAIR data principles](https://www.go-fair.org/fair-principles/),
+    [@wilkinson2016]
