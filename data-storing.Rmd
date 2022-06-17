@@ -1,5 +1,5 @@
 ---
-title: "Storing and sharing data"
+title: "Storing (or serializing) data"
 author: "Andrew Irwin"
 date: "`r Sys.Date()`"
 output: html_document
@@ -31,21 +31,14 @@ Are the meanings of the variables clearly described? Are the units? Can
 I validate the data to be sure there are no "obvious" errors? Can I be
 sure I got them into my computer without error?
 
-## Easy to use
-
-For R users, the easiest data to use can be found in R packages. For
-example the `palmerpenguins` data is easy to find on CRAN or github,
-easy to install on your computer, and is well documented
-[@palmerpenguins].
-
-frictionless data
-
-## Metadata
-
-How to find? Cite? Use?
-
-Github osf.io or other repository
 
 ## Formats
 
-csv xlsx frictionless csv databases - sqlite, duckdb fst, parquet
+qs
+fst
+arrow / parquet
+sqlite
+duckdb
+rds
+csv
+
