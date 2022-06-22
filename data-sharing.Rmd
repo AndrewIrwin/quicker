@@ -204,9 +204,31 @@ new_test_data <- read_resource(new_package, "test_data")
 
 ## Distribution
 
-How to find? Cite? Use?
+Once you've created your data, how will somone find it? Cite it? Use it?
 
-Github osf.io or other repository
+I suggest putting your data into a repository. For small, text-based data GitHub is an ideal choice. It's widely used and so familiar to many people. The Open Science Foundation operates a respository at osf.io. Their repositories provide dois, can be private or public, and has an R package `osfr` to make it easy to use the data.
+
+For example, there is a data repository [here](https://osf.io/hsvw4/) which I will demonstrate.
+
+```{r}
+library(osfr)
+dv_data <- osf_retrieve_node("https://osf.io/hsvw4/")
+dv_files <- osf_ls_files(dv_data)
+osf_download(dv_files[1,], path = here::here()) # creates local copy of file in your package root directory
+```
+
+Here are two ways to read the file from the remote site without creating a file on your computer. You can get the download link from the output of `osf_ls_files`, or you can modify the data table to provide all the download links for easy use.
+
+```{r}
+read_csv(dv_files$meta[[1]]$links$download, comment = "#")
+
+get_download_link <- function(osf_files) {
+    osf_files |> rowwise() |> mutate(download = meta$links$download) |> ungroup()
+}
+
+dv_files |> get_download_link() -> dv_files
+```
+
 
 ## References
 
