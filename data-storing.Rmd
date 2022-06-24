@@ -11,6 +11,11 @@ bibliography: references.bib
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse, quietly = TRUE)
+library(rbenchmark)
+library(here)
+temp_file = tempfile()
+temp_dir = tempdir()
 ```
 
 ## Tradeoffs
@@ -18,27 +23,207 @@ knitr::opts_chunk$set(echo = TRUE)
 The classic tradeoff in computing is between time and storage space.
 These trade-offs are important when using data too: bulkier data formats
 can be faster to use, but there are interesting exceptions too.
-Compressed data is faster to transmit between computers and is often
+Compressed data is faster to transmit between computers and may be
 faster to move from storage on your computer into the processor too.
 Compressed data can be highly structured and faster to access compared
 to bulkier data. With modern computers for many people and much of their
-data, these trade-offs are not particularly important.
+data, these trade-offs are not particularly important. Benchmarks on space 
+and time requirements are often necessary to know how these tradeoffs apply to your
+particular data and planned use.
 
-The biggest barrier to using data is finding the data and finding easily
-understood metadata. Where are the data? How do I cite the data? Can
-anyone else find those data? How easy is it for others to use the data?
-Are the meanings of the variables clearly described? Are the units? Can
-I validate the data to be sure there are no "obvious" errors? Can I be
-sure I got them into my computer without error?
+Here I demonstrate how to write a data frame in about 10 formats from bulky to compact and 
+slow to fast. Each has its own particular benefit.
 
+## Sample data
+
+```{r echo=FALSE}
+N = 100000
+test_data <- tibble(
+  letters = sample(letters, N, replace=TRUE),
+  words = sample(words, N, replace=TRUE),
+  condition = sample(c(TRUE, FALSE), N, replace = TRUE),
+  indexes = sample(1:N, N),
+  normals = rnorm(N, 25, 3),
+  factors = factor(sample(LETTERS, N, replace=TRUE)),
+  dates = lubridate::today() + sample(-(1:365), N, replace = TRUE),
+  times = lubridate::now() + sample(-(1:86400), N, replace = TRUE)
+)
+```
 
 ## Formats
 
-qs
-fst
-arrow / parquet
-sqlite
-duckdb
-rds
-csv
+Rds is the most portable for R users: it's built into R, so anyone can read your data. You can use data compression, but it slows down writing (considerably) and reading (slightly).
+
+```{r}
+saveRDS(test_data, file = temp_file, compress = FALSE)
+file_sizes <- tibble(method = "RDS", size = file.size(temp_file))
+saveRDS(test_data, file = temp_file)
+file_sizes |> add_row(method = "RDS, compressed", size = file.size(temp_file)) -> file_sizes
+
+times <- benchmark( writing_RDS = { saveRDS(test_data, file = temp_file, compress = FALSE) },
+           reading_RDS = { temp <- readRDS(file = temp_file) },
+           writing_RDS.compressed = { saveRDS(test_data, file = temp_file) },
+           reading_RDS.compressed = { temp <- readRDS(file = temp_file) }
+)
+```
+
+CSV is the most portable across software packages, but information about variable types is lost, and R guesses the types from the start of the file, unless you tell it what format to use. The arrow package provides a faster CSV reader and writer package. Reading and writing compressed files is slower with CSV files, as it was for Rds format. Reading a CSV file using the arrow package takes about as long as reading and Rds file, but the larger text files processes are generally slower.
+
+```{r}
+write_csv(test_data, file = paste0(temp_file, ".csv.bz2"))
+file_sizes |> add_row(method = "CSV, compressed", size = file.size(paste0(temp_file, ".csv.bz2"))) -> file_sizes
+write_csv(test_data, file = temp_file) 
+file_sizes |> add_row(method = "CSV", size = file.size(temp_file)) -> file_sizes
+arrow::write_csv_arrow(test_data, file = temp_file)
+file_sizes |> add_row(method = "CSV, arrow", size = file.size(temp_file)) -> file_sizes
+
+times <- bind_rows(times,
+      benchmark( writing_CSV.compressed = { write_csv(test_data, file = paste0(temp_file, ".csv.bz2")) },
+           reading_CSV.compressed = { temp <- read_csv(file = paste0(temp_file, ".csv.bz2"), show_col_types = FALSE) },
+           reading_CSV.compressed.types = { temp <- read_csv(file = paste0(temp_file, ".csv.bz2"), col_types = "cccccccc") },
+           writing_CSV = { write_csv(test_data, file = temp_file) },
+           reading_CSV = { temp <- read_csv(file = temp_file, show_col_types = FALSE) },
+           reading_CSV.types = { temp <- read_csv(file = temp_file, col_types="cccccccc") },
+           writing_CSV.arrow = { arrow::write_csv_arrow(test_data, file = temp_file) },
+           reading_CSV.arrow = { temp <- arrow::read_csv_arrow(file = temp_file, col_names = letters[1:8], col_types="cccccccc") }
+))
+```
+
+## Faster formats
+
+Two packages are designed for speed: `fst` and `qs`. They take about half of the time used by RDS functions. The fst package only writes data table, but qs can write any R object.
+
+```{r}
+fst::write_fst(test_data, temp_file)
+file_sizes |> add_row(method = "fst", size = file.size(temp_file)) -> file_sizes
+qs::qsave(test_data, file = temp_file) 
+file_sizes |> add_row(method = "qs", size = file.size(temp_file)) -> file_sizes
+
+times <- bind_rows(times, 
+benchmark( writing_fst = { fst::write_fst(test_data, temp_file) },
+           reading_fst = { temp <- fst::read_fst(temp_file) },
+           writing_qs = { qs::qsave(test_data, file = temp_file) },
+           reading_qs = { temp <- qs::qread(file = temp_file) }
+))
+```
+
+
+## Databases
+
+Databases generally take a bit more space on disk than the smallest formats, but the data can be used without loading it all in to your R session's working memory. This is particularly advantageous for large datasets.
+
+```{r}
+# Parquet 
+arrow::write_parquet(test_data, temp_file)
+file_sizes |> add_row(method = "parquet", size = file.size(temp_file)) -> file_sizes
+# SQLite
+con <- DBI::dbConnect(RSQLite::SQLite(), paste0(temp_file, ".sqlite")) 
+DBI::dbWriteTable(con, "temp_file", test_data, overwrite=TRUE)
+DBI::dbDisconnect(con)
+file_sizes |> add_row(method = "SQLite", size = file.size(paste0(temp_file, ".sqlite"))) -> file_sizes
+# DuckDB
+con <- DBI::dbConnect(duckdb::duckdb(), paste0(temp_file, ".duck")) 
+DBI::dbWriteTable(con, "temp_file", test_data, overwrite=TRUE)
+DBI::dbDisconnect(con, shutdown=TRUE)
+file_sizes |> add_row(method = "duckdb", size = file.size(paste0(temp_file, ".duck"))) -> file_sizes
+times <- bind_rows(times,
+    benchmark( writing_parquet = { arrow::write_parquet(test_data, temp_file) },
+           reading_parquet = { temp <- arrow::read_parquet(temp_file) },
+           writing_sqlite = { 
+             con <- DBI::dbConnect(RSQLite::SQLite(), paste0(temp_file, ".sqlite")) 
+             DBI::dbWriteTable(con, "temp_file", test_data, overwrite=TRUE)
+             DBI::dbDisconnect(con)
+            },
+           reading_sqlite = { 
+             con <- DBI::dbConnect(RSQLite::SQLite(), paste0(temp_file, ".sqlite")) 
+             temp<- DBI::dbReadTable(con, "temp_file")
+             DBI::dbDisconnect(con)
+           },
+           writing_duckdb = { 
+             con <- DBI::dbConnect(duckdb::duckdb(), paste0(temp_file, ".duck")) 
+             DBI::dbWriteTable(con, "temp_file", test_data, overwrite=TRUE)
+             DBI::dbDisconnect(con, shutdown=TRUE)
+            },
+           reading_duckdb = { 
+             con <- DBI::dbConnect(duckdb::duckdb(), paste0(temp_file, ".duck")) 
+             temp<- DBI::dbReadTable(con, "temp_file")
+             DBI::dbDisconnect(con, shutdown=TRUE)
+           }
+))
+```
+
+Show results
+
+```{r echo=FALSE}
+times |> select(test, elapsed, user.self, sys.self) |>
+  separate(test, c("Task", "Format"), sep ="_") |>
+  group_by(Task) |>
+  mutate(relative = elapsed / min(elapsed)) |> 
+  arrange(Task, relative)  |>
+  knitr::kable() |> kableExtra::kable_styling(full_width=FALSE)
+```
+
+```{r echo=FALSE}
+## Helper from utils:::format.object_size, 
+### https://stackoverflow.com/questions/63459178/r-cut-function-with-custom-labels
+KMG <- function(x, standard = "SI", digits = 1L, sep = "", suffix = "") {
+  known_bases <- c(legacy = 1024, IEC = 1024, SI = 1000)
+  known_units <- list(SI = c("", "k", "M", "G", "T", "P", 
+      "E", "Z", "Y"), IEC = c("", "Ki", "Mi", "Gi", 
+      "Ti", "Pi", "Ei", "Zi", "Yi"), legacy = c("", "K", 
+      "M", "G", "T", "P"))
+  standard <- match.arg(standard, c("auto", names(known_bases)))
+  if (is.null(digits)) 
+      digits <- 1L
+  base <- known_bases[[standard]]
+  units_map <- known_units[[standard]]
+  powers <- rep(0L, length(x))
+  powers[x > 0] <- pmin(as.integer(log(x[x > 0], base = base)), length(units_map) - 1L)
+  units <- paste0(units_map[powers + 1L], suffix)
+  paste(round(x/base^powers, digits = digits), units, sep = sep)
+}
+```
+
+```{r echo=FALSE}
+file_sizes |> mutate(relative = signif(size / min(size), 3),
+                     length = KMG(size)) |>
+  arrange(size) |> select(-size) |>
+  knitr::kable(align = 'lrr') |> kableExtra::kable_styling(full_width = FALSE)
+
+```
+
+## Database queries
+
+Traditional databases are organized in rows (SQLite), while some systems are organized in columns (DuckDB).
+
+Queries and times.
+
+```{r}
+con1 <- DBI::dbConnect(RSQLite::SQLite(), paste0(temp_file, ".sqlite")) 
+con2 <- DBI::dbConnect(duckdb::duckdb(), paste0(temp_file, ".duck")) 
+t1 <- tbl(con1, "temp_file")
+t2 <- tbl(con2, "temp_file")
+
+s2 <- benchmark(sqlite_factors = { count(t1,factors) |> collect() },
+          duckdb_factors = { count(t2, factors) |> collect() },
+          sqlite_mean = { summarize(t1, m = mean(normals)) |> collect() },
+          duckdb_mean = { summarize(t2, m = mean(normals)) |> collect() },
+          sqlite_grouped.mean = { t1 |> group_by(letters) |> summarize(m = mean(normals)) |> collect() },
+          duckdb_grouped.mean = { t2 |> group_by(letters) |> summarize(m = mean(normals)) |> collect() },
+          sqlite_subset.mean = { t1 |> filter(letters == "f") |> summarize(m = mean(normals)) |> collect() },
+          duckdb_subset.mean = { t2 |> filter(letters == "f") |> summarize(m = mean(normals)) |> collect() },
+          sqlite_sort = { t1 |> arrange(words) |> collect() },
+          duckdb_sort = { t2 |> arrange(words) |> collect() }
+)
+
+
+DBI::dbDisconnect(con1)
+DBI::dbDisconnect(con2, shutdown=TRUE)
+```
+
+```{r}
+s2 |> select(-user.child, -sys.child, -replications) |> arrange(relative) |>
+  separate(test, c("db", "process"), sep="_") |>
+  knitr::kable() |> kableExtra::kable_styling(full_width = FALSE)
+```
 
