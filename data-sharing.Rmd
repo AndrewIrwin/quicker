@@ -229,6 +229,12 @@ get_download_link <- function(osf_files) {
 dv_files |> get_download_link() -> dv_files
 ```
 
+If you have a database file (arrow, sqlite, duckdb) in the repository, you can query the file too.
+
+Put data in a "feather" (arrow) file and "pin" it, then access remotely. Use to_duckdb() before handing off to dplyr
+https://jthomasmock.github.io/bigger-data/#80
+
+
 
 ## References
 
