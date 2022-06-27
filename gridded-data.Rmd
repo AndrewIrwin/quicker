@@ -1,0 +1,75 @@
+---
+title: "gridded data"
+author: "Andrew Irwin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidync)
+library(duckdb)
+library(arrow)
+library(tictoc)
+```
+
+* Load netcdf file
+* Put into csv, duckdb, arrow
+* storage space
+* time queries - averaging
+
+```{r}
+topo <- tidync("~/Dropbox/Data/env-data-downloads/ETOPO5.nc")
+file.size("~/Dropbox/Data/env-data-downloads/ETOPO5.nc")/1024^2  # 17 MB
+topo |> hyper_array()
+topo |> hyper_tibble() 
+```
+
+Create duckdb.
+
+```{r}
+con <- dbConnect(duckdb(), "etopo.duck")
+dbWriteTable(con, "etopo", 
+             topo |> hyper_tibble() |> collect() )
+dbDisconnect(con, shutdown=TRUE)
+file.size("etopo.duck")/1024^2  # 94 MB (5.5x more)
+```
+
+
+Create feather
+
+```{r}
+write_feather(topo |> hyper_tibble() |> collect(),
+             "etopo.feather")
+file.size("etopo.feather")/1024^2  # 34 MB (2x more)
+```
+
+
+Open duck db
+
+```{r}
+con <- dbConnect(duckdb(), "etopo.duck")
+etopo_duck <- tbl(con, "etopo")
+etopo_feather <- read_feather("etopo.feather")
+```
+
+Time some simple computations - averages. These computations are too quick to provide sensible timings.
+
+```{r}
+tic("mean and slice")
+tic("netcdf")
+topo |> hyper_filter(Y = index == 1000) |> hyper_tibble() |>
+  summarize(elev = mean(elev))
+toc() # 0.156s
+tic("duckdb")
+etopo_duck |> filter(abs(Y - 6.75) < 0.001 ) |>
+  summarize(elev = mean(elev))
+toc() # 0.113s
+tic("feather")
+etopo_feather |> filter(abs(Y - 6.75) < 0.001 ) |>
+  summarize(elev = mean(elev))
+toc() # 0.176s
+toc()
+```
+
