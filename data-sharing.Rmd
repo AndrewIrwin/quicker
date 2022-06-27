@@ -244,3 +244,4 @@ https://jthomasmock.github.io/bigger-data/#80
 -   a reference for spreadsheet data management
 -   [FAIR data principles](https://www.go-fair.org/fair-principles/),
     [@wilkinson2016]
+-   Frictionless data [documentation](https://framework.frictionlessdata.io/docs/references/references-overview)
