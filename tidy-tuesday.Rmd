@@ -1,68 +1,71 @@
 ---
-title: "TidyTemplate"
-date: 2021-01-08
-output: html_output
+title: "Tidy Tuesday"
+date: 2022-06-28
 ---
 
-# TidyTuesday
-
-Join the R4DS Online Learning Community in the weekly #TidyTuesday event!
-Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
-While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
-The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
-As such we encourage everyone of all skills to participate!
-
 ```{r setup, include=FALSE}
-
 knitr::opts_chunk$set(echo = TRUE)
+```
 
-library(tidyverse)
+The way we organize data affects how we think about the data and the tools we use to analyze and visualize the data. Many people advocate a particularly simple organizational style known as "tidy data": each column is a different variable, with the same units in all rows. Each row is an observation and the entries for all columns in that row refer to the same observation.
+
+The advantages of [tidy data](https://tidyr.tidyverse.org/) are discussed in the descriptions of the "tidyverse", especially "ggplot" and "dplyr" tools. For more see the [R for Data Science](https://r4ds.had.co.nz/) book.
+
+A team of interested volunteers is developing a curated set of tidy data from a wide range of topics, with new data sets released weekly. For alliterative fun this is called the [Tidy Tuesday](https://github.com/rfordatascience/tidytuesday) project. The idea is that you can pick the weekly data, or any data you like, and start exploring it as a way to motivate teaching yourself (or learning in a group) to analyze and visualize data.
+
+# Tidy Tuesday
+
+Tidy Tuesday are not always tidy! You might want to apply various R for Data Science techniques to wrangle the data into a true tidy format.
+The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work.
+
+To get started, use the `tidyverse` and `tidytuesdayR` packages.
+
+```{r}
+library(tidyverse, quietly = TRUE)
 library(tidytuesdayR)
-
 ```
 
 # Load the weekly Data
 
-Dowload the weekly data and make available in the `tt` object.
+You can get data from any week using `tt_load`.
 
 ```{r Load}
-
 tt <- tt_load("2019-10-15")
-
+# tt <- tt_load("2022-06-21")
 ```
 
+You can also create a new R markdown file for tidy data using the `use_tidytemplate` function in the console. Try this function call:
+
+```{r eval=FALSE}
+use_tidytemplate()
+```
 
 # Readme
 
 Take a look at the readme for the weekly data to get insight on the dataset.
-This includes a data dictionary, source, and a link to an article on the data.
+This includes a data dictionary, source, and a link to an article on the data. (The information does not show up in the knitted output, but if you view the data in Rstudio you'll see information about the data in the 'viewer' window.)
 
 ```{r Readme, eval = interactive()}
-
-tt
-
+tt 
 ```
 
 
 # Glimpse Data
 
-Take an initial look at the format of the data available.
+You can glimpse the data using the `glimpse` function. (Here I use `map` to glimpse each dataset in tt.)
 
 ```{r Glimpse}
-
 tt %>% 
   map(glimpse)
-
 ```
 
 # Wrangle
 
-Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set. You can see the names of the datasets in `tt` using `names`:
 
 ```{r Wrangle}
-
-
-
+names(tt)
+tt$big_epa_cars
 ```
 
 
@@ -71,20 +74,16 @@ Explore the data and process it into a nice format for plotting! Access each dat
 Using your processed dataset, create your unique visualization.
 
 ```{r Visualize}
-
-
-  
+tt$big_epa_cars |>
+  ggplot(aes(fuelCost08, 
+             fct_reorder(drive, fuelCost08))) +
+  geom_boxplot()
 ```
 
 # Save Image
 
-Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your post on twitter! 
+Save your image for sharing. You can save your most recent plot using `ggsave`:
 
 ```{r}
-
-# This will save your most recent plot
-ggsave(
-  filename = "My TidyTuesday Plot.png",
-  device = "png")
-
+ggsave(filename = "My TidyTuesday Plot.png")
 ```

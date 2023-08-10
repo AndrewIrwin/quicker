@@ -19,7 +19,7 @@ When you first get a new dataset into R you should immediately have a few questi
 
 The following functions give quick summaries of the data that may help you with these questions.
 
-* head, str, pillar::glimpse, vtree, naniar
+* head, str, dplyr::glimpse, vtree, naniar
 
 ```{r}
 head(penguins)
@@ -27,7 +27,7 @@ head(penguins)
 
 ```{r}
 str(penguins)
-pillar::glimpse(penguins)
+dplyr::glimpse(penguins)
 ```
 
 
